@@ -1,0 +1,6 @@
+/.idea
+.DS_Store
+/*.esproj
+*.sublime-project
+*.sublime-workspace
+.wat

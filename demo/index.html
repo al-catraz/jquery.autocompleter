@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <title>jquery.autocompleter demo</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+    <link href="../src/jquery.autocompleter.less" rel="stylesheet/less" type="text/css" />
+</head>
+<body>
+    <input type="text" name="data_array[]" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-custom-values="true" />
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js"></script>
+    <script src="../src/jquery.autocompleter.js"></script>
+
+    <script>
+        (function() {
+            function jsonUpdateHandler(event, json) {
+                console.log(json)
+            }
+
+            function itemAddHandler(event, item) {
+                console.log(item)
+            }
+
+            function itemRemoveHandler(event, item) {
+                console.log(item)
+            }
+
+            $(function() {
+                $('input[data-autocompleter="true"]').autocompleter()
+                                                     .on('json-update', jsonUpdateHandler)
+                                                     .on('item-add', itemAddHandler)
+                                                     .on('item-remove', itemRemoveHandler);
+            });
+        }());
+    </script>
+</body>
+</html>
