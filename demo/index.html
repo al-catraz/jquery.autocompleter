@@ -9,7 +9,9 @@
     <link href="../src/jquery.autocompleter.less" rel="stylesheet/less" type="text/css" />
 </head>
 <body>
-    <input type="text" name="data_array[]" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-custom-values="true" />
+<form>
+    <input type="text" name="data_array[]" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-custom-items="true" data-unique-items="true" />
+</form>
 
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js"></script>
@@ -19,21 +21,25 @@
         (function() {
             function jsonUpdateHandler(event, json) {
                 console.log(json)
+
+                var parsedJson = 'sparsowany json';
+
+                return parsedJson;
             }
 
             function itemAddHandler(event, item) {
-                console.log(item)
+                console.log('dodany item', item)
             }
 
             function itemRemoveHandler(event, item) {
-                console.log(item)
+                console.log('usuniety item', item)
             }
 
             $(function() {
                 $('input[data-autocompleter="true"]').autocompleter()
-                                                     .on('json-update', jsonUpdateHandler)
-                                                     .on('item-add', itemAddHandler)
-                                                     .on('item-remove', itemRemoveHandler);
+                                                     .on('json-update.autocompleter', jsonUpdateHandler)
+                                                     .on('item-add.autocompleter', itemAddHandler)
+                                                     .on('item-remove.autocompleter', itemRemoveHandler);
             });
         }());
     </script>

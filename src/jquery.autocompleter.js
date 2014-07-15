@@ -23,17 +23,22 @@
     var instance = {
             $autocompleter: null,
             $itemsList:     null,
+            $item:          null,
             $input:         null,
             $inputMirror:   null,
             options:        null,
-            keyTimeout:     null
+            keyTimeout:     null,
+            itemFocusIndex: -1
         },
 
         templates = {
             $autocompleter: $('<section></section>').addClass('jquery-autocompleter')
                                                     .append($('<ul></ul>').addClass('items-list')
                                                                           .append($('<li></li>').addClass('input')
-                                                                                                .append($('<input/>').attr('type', 'text'))))
+                                                                                                .append($('<input/>').attr({
+                                                                                                                          type: 'text',
+                                                                                                                          autocomplete: 'off'
+                                                                                                                      }))))
                                                     .append($('<span></span>').addClass('input-mirror')),
 
             $item:          $('<li></li>').addClass('item')
@@ -90,12 +95,20 @@
             documentKeydownHandler: function(event) {
                 var key = keyMap[event.keyCode];
 
-                switch (key) {
-                    case 'DELETE':
-                    case 'BACKSPACE':   privates.itemKeydownDelete(event);
-                                        break;
+                if (!instance.$input.is('.focus')) {
+                    switch (key) {
+                        case 'DELETE':
+                        case 'BACKSPACE':   privates.itemKeydownDelete(event);
+                                            break;
 
-                    default:            break;
+                        case 'LEFT-ARROW':  privates.itemFocus.call('PREV');
+                                            break;
+
+                        case 'RIGHT-ARROW': privates.itemFocus.call('NEXT');
+                                            break;
+
+                        default:            break;
+                    }
                 }
 
                 return this;
@@ -103,7 +116,7 @@
 
             setStyles: function() {
                 var $originalInput          = $(this),
-                    $item                   = templates.$item.clone(),
+                    $item                   = instance.$item.clone(),
                     originalInputWidth      = $originalInput.outerWidth(),
                     originalInputHeight     = $originalInput.outerHeight(),
                     originalInputFontSize   = parseInt($originalInput.css('font-size').replace('px', ''), 10),
@@ -121,12 +134,12 @@
 
                 $item.remove();
 
-                $originalInput.data({
-                    'original-width': originalInputWidth,
-                    'original-height': originalInputHeight
+                instance.$autocompleter.css({
+                    width: originalInputWidth,
+                    minHeight: originalInputHeight
                 });
 
-                templates.$item.css({
+                instance.$item.css({
                     fontSize: Math.round(lineHeight * fontSizeRatio),
                     lineHeight: lineHeight + 'px'
                 });
@@ -172,27 +185,26 @@
                     inputWidth = maxWidth;
                 }
 
-                instance.$input.children().width(inputWidth);
+                instance.$input.children().width(Math.round(inputWidth));
 
                 return this;
             },
 
             autocompleterClickHandler: function(event) {
-                var $input = instance.$input.children(),
-                    $target = $(event.target),
-                    targetIsInput = ($target.parents('.jquery-autocompleter').length && $target.is('.input'));
+                var $target = $(event.target),
+                    targetIsInput = ($target.parents('.jquery-autocompleter').length && $target.is('input:text'));
 
-                if (!instance.$autocompleter.is('[disabled]') && ($target.is('.jquery-autocompleter') ||
+                if (!instance.$autocompleter.is('.disabled') && ($target.is('.jquery-autocompleter') ||
                     $target.parents('.jquery-autocompleter').length || targetIsInput)) {
                     instance.$autocompleter.addClass('focus');
 
                     if (!targetIsInput) {
                         if (!$target.is('.item') && !$target.parents('.item').length) {
-                            $input.trigger('focus');
+                            instance.$input.children().trigger('focus');
                         }
                     }
                     else if (targetIsInput || $target.is('.jquery-autocompleter')) {
-                        instance.$itemsList.find('.focus').removeClass('focus');
+                        privates.inputListBlur.call(this);
                     }
                 }
 
@@ -201,19 +213,35 @@
 
             autocompleterBlurHandler: function() {
                 instance.$autocompleter.removeClass('focus');
-                instance.$itemsList.find('.focus').removeClass('focus');
+                privates.inputListBlur.call(this);
+                privates.inputClear.call(this);
+
+                return this;
+            },
+
+            inputListBlur: function() {
+                instance.$itemsList.children('.focus:not(.input)').removeClass('focus');
+
+                return this;
+            },
+
+            inputBlurHandler: function() {
+                instance.$input.removeClass('focus');
+                privates.autocompleterBlurHandler.call(this);
 
                 return this;
             },
 
             inputFocusHandler: function() {
-                instance.$autocompleter.addClass('focus');
-                instance.$itemsList.find('.focus').removeClass('focus');
+                instance.itemFocusIndex = instance.$itemsList.children(':not(.input)').length;
+
+                instance.$autocompleter.add(instance.$input).addClass('focus');
+                privates.inputListBlur.call(this);
 
                 return this;
             },
 
-            inputKeyupHandler: function(event) {
+            inputKeydownHandler: function(event) {
                 var key     = keyMap[event.keyCode],
                     value   = null,
                     item    = {
@@ -221,13 +249,17 @@
                         value: 'value'
                     }; // TODO wstawic prawidlowy item z listy sugestii albo to co ktos ma wpisane w polu jest jest taka opcja wlaczona
 
+                if (key === 'ENTER' || key === 'TAB') {
+                    event.preventDefault();
+                }
+
                 setTimeout(function() {
                     value = instance.$input.children().val();
 
                     instance.$inputMirror.text(value);
                     privates.setInputWidth.call(this);
 
-                    if (instance.options.customValues) {
+                    if (instance.options.customItems) {
                         item = {
                             label: value,
                             value: value
@@ -235,13 +267,24 @@
                     }
 
                     switch (key) {
-                        case 'ENTER':   publics.itemAdd(item);
-                            event.preventDefault();
-                            break;
+                        case 'TAB':
+                        case 'ENTER':       publics.itemAdd(item);
+                                            break;
 
-                        default:        break;
+                        case 'LEFT-ARROW':  privates.itemFocus.call('PREV', true);
+                                            break;
+
+                        default:            break;
                     }
                 }, 0);
+
+                return this;
+            },
+
+            inputClear: function() {
+                instance.$input.children().val('');
+                instance.$inputMirror.empty();
+                privates.setInputWidth.call(this);
 
                 return this;
             },
@@ -252,23 +295,65 @@
                 if ($item.length) {
                     event.preventDefault();
                     publics.itemRemove($item);
-                    instance.$input.children().trigger('focus');
                 }
 
                 return this;
             },
 
             itemClickHandler: function() {
+                var $item = $(this);
+
+                instance.itemFocusIndex = $item.index();
+
                 privates.itemFocus.call(this);
 
                 return this;
             },
 
             itemFocus: function() {
-                var $item = $(this);
+                var $item           = null,
+                    minIndex        = 0,
+                    maxIndex        = instance.$itemsList.children(':not(.input)').length,
+                    focusTriggered  = false;
 
-                instance.$itemsList.find('.focus').removeClass('focus');
-                $item.addClass('focus');
+                if (typeof(this) === 'string') {
+                    if (this === 'PREV') {
+                        instance.itemFocusIndex--;
+                    }
+                    else if (this === 'NEXT') {
+                        instance.itemFocusIndex++;
+                    }
+
+                    if (instance.itemFocusIndex < minIndex) {
+                        instance.itemFocusIndex = minIndex;
+                    }
+
+                    if (instance.itemFocusIndex >= maxIndex) {
+                        focusTriggered = true;
+
+                        instance.$input.children().trigger('focus');
+                    }
+
+                    if (instance.itemFocusIndex > maxIndex) {
+                        instance.itemFocusIndex = maxIndex;
+                    }
+
+                    $item = instance.$itemsList.children().eq(instance.itemFocusIndex);
+                }
+                else {
+                    $item = $(this);
+                }
+
+                if (!focusTriggered) {
+                    instance.$input.children().trigger('blur');
+                    instance.$autocompleter.addClass('focus');
+                }
+
+                privates.inputListBlur.call(this);
+
+                if ($item.is('.item')) {
+                    $item.addClass('focus');
+                }
 
                 return this;
             },
@@ -304,6 +389,7 @@
 
                     instance.$autocompleter = $autocompleter;
                     instance.$itemsList = instance.$autocompleter.find('.items-list');
+                    instance.$item = templates.$item.clone();
                     instance.$input = instance.$autocompleter.find('.input');
                     instance.$inputMirror = instance.$autocompleter.find('.input-mirror');
 
@@ -311,18 +397,20 @@
 
                     privates.setOptions.call(this);
                     privates.setStyles.call(this);
-
-                    instance.$autocompleter.css({
-                        width: $originalElement.data('original-width'),
-                        minHeight: $originalElement.data('original-height')
-                    });
-
                     privates.setInputWidth.call(this);
 
                     instance.$input.children().attr('placeholder', $originalElement.attr('placeholder'))
-                                              .on('blur', privates.autocompleterBlurHandler)
+                                              .on('blur', privates.inputBlurHandler)
                                               .on('focus', privates.inputFocusHandler)
-                                              .on('keydown', privates.inputKeyupHandler);
+                                              .on('keydown', privates.inputKeydownHandler);
+
+                    if ($originalElement.is(':disabled')) {
+                        publics.disable.call(this);
+                    }
+
+                    if (instance.options.singleItem) {
+                        instance.$autocompleter.addClass('single');
+                    }
 
                     $originalElement.remove();
                 }
@@ -363,9 +451,10 @@
             },
 
             itemAdd: function(item) {
-                var $item = templates.$item.clone(),
+                var $item = instance.$item.clone(),
                     label = null,
-                    value = null;
+                    value = null,
+                    itemCanBeAdded = true;
 
                 if (item instanceof $) {
                     // TODO: wyciagac z <li> danej sugestii dane
@@ -373,6 +462,10 @@
                 else {
                     label = item.label;
                     value = item.value;
+                }
+
+                if (instance.options.uniqueItems && instance.$itemsList.find('.item[data-label="' + item.label + '"][data-value="' + item.value + '"]').length) {
+                    itemCanBeAdded = false;
                 }
 
                 if (label !== '' && value !== '') {
@@ -383,10 +476,14 @@
                          .find('.value').val(value).end()
                          .find('.remove').on('click', privates.removeClickHandler);
 
-                    $item.insertBefore(instance.$input);
-                    instance.$input.children().val('');
-                    instance.$inputMirror.empty();
-                    privates.setInputWidth.call(this);
+                    if (itemCanBeAdded) {
+                        $item.insertBefore(instance.$input);
+                        instance.$autocompleter.data('original-input').trigger('item-add.autocompleter', $item);
+
+                        instance.itemFocusIndex = instance.$itemsList.children(':not(.input)').length;
+                    }
+
+                    privates.inputClear.call(this);
                 }
 
                 return $item;
@@ -402,10 +499,51 @@
                     $item = instance.$itemsList.find('.item[data-label="' + item.label + '"][data-value="' + item.value + '"]');
                 }
 
-                $item.remove();
+                if ($item.length) {
+                    $item.remove();
+                    privates.setInputWidth.call(this);
+                    instance.$autocompleter.data('original-input').trigger('item-remove.autocompleter', $item);
+                    instance.$input.children().trigger('focus');
+
+                    instance.itemFocusIndex = instance.$itemsList.children(':not(.input)').length;
+                }
+
+                return $item;
+            },
+
+            getValues: function() {
+                var values = $.map(instance.$itemsList.children(':not(.input)'), function(item) {
+                        var value = $(item).attr('data-value');
+
+                        if (!isNaN(parseInt(value, 10))) {
+                            value = parseInt(value, 10);
+                        }
+
+                        return value;
+                    });
+
+                return values;
+            },
+
+            clearItems: function() {
+                instance.$itemsList.children(':not(.input)').remove();
                 privates.setInputWidth.call(this);
 
-                return item;
+                return this;
+            },
+
+            disable: function() {
+                instance.$autocompleter.addClass('disabled');
+                instance.$input.children().prop('disabled', true);
+
+                return this;
+            },
+
+            enable: function() {
+                instance.$autocompleter.removeClass('disabled');
+                instance.$input.children().prop('disabled', false);
+
+                return this;
             }
         };
 
