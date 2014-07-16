@@ -9,22 +9,23 @@
     <link href="../src/jquery.autocompleter.less" rel="stylesheet/less" type="text/css" />
 </head>
 <body>
-<form>
-    <input type="text" name="data_array[]" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-custom-items="true" data-unique-items="true" />
-</form>
+    <form>
+        <input type="text" name="data_array[]" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-ajax-url="http://www.goldenline.pl.127.0.0.1.xip.io/GoldenLine/web/app_dev.php/ajax-json?method=Profile.Experience.GetCompanyNameFA&name=" data-custom-items="true" data-unique-items="true" />
+    </form>
 
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js"></script>
+    <script src="../dist/jquery.min.js"></script>
+    <script src="../dist/less.min.js"></script>
     <script src="../src/jquery.autocompleter.js"></script>
 
     <script>
         (function() {
             function jsonUpdateHandler(event, json) {
-                console.log(json)
+                var $autocompleter = $(event.target).parents('.jquery-autocompleter');
+                console.log($(event.target))
 
                 var parsedJson = 'sparsowany json';
 
-                return parsedJson;
+                $autocompleter.data('suggestions', parsedJson);
             }
 
             function itemAddHandler(event, item) {
