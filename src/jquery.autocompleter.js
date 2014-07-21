@@ -21,21 +21,24 @@
     'use strict';
 
     var instance = {
-            $originalInput: null,
-            $autocompleter: null,
-            $itemsList:     null,
-            $item:          null,
-            $input:         null,
-            $inputMirror:   null,
-            options:        {
-                name:           null,
-                minCharacters:  2,
-                maxSuggestions: 10
+            $originalInput:         null,
+            $autocompleter:         null,
+            $suggestionsList:       null,
+            $itemsList:             null,
+            $item:                  null,
+            $input:                 null,
+            $inputMirror:           null,
+            options:                {
+                name:               null,
+                minCharacters:      2,
+                maxSuggestions:     10
             },
-            keyTimeout:     null,
-            xhr:            null,
-            suggestions:    [],
-            itemFocusIndex: 0
+            keyTimeout:             null,
+            xhr:                    null,
+            suggestions:            [],
+            itemFocusIndex:         0,
+            suggestionFocusIndex:   0,
+            inputCaretIndex:        0
         },
 
         templates = {
@@ -46,13 +49,17 @@
                                                                                                                           type: 'text',
                                                                                                                           autocomplete: 'off'
                                                                                                                       }))))
+                                                    .append($('<ul></ul>').addClass('suggestions-list hide'))
                                                     .append($('<span></span>').addClass('input-mirror')),
 
             $item:          $('<li></li>').addClass('item')
                                           .append($('<span></span>').addClass('label'))
                                           .append($('<a></a>').addClass('remove'))
                                           .append($('<input/>').addClass('value')
-                                                               .attr('type', 'hidden'))
+                                                               .attr('type', 'hidden')),
+
+            $suggestion:    $('<li></li>').addClass('suggestion')
+                                          .append($('<span></span>').addClass('label'))
         },
 
         keyMap = {
@@ -85,17 +92,36 @@
                     publics.build.call($input);
                 });
 
-                $(document).on('click', privates.documentClickHandler)
-                           .on('keydown', privates.documentKeydownHandler);
+                $(document).on('click.autocompleter', privates.documentClickHandler)
+                           .on('keydown.autocompleter', privates.documentKeydownHandler);
 
                 return this;
             },
 
             documentClickHandler: function(event) {
-                var $target = $(event.target);
+                var $target = $(event.target),
+                    $originalInput = [],
+                    $input = [];
 
                 if (!$target.is('.jquery-autocompleter') && !$target.parents('.jquery-autocompleter').length) {
                     privates.autocompleterBlurHandler();
+                }
+
+                if ($target.is('label')) {
+                    if ($target.attr('for')) {
+                        $originalInput = $('#' + $target.attr('for'));
+                    }
+                    else {
+                        $originalInput = $target.find('.jquery-autocompleter-attached');
+                    }
+
+                    $input = $originalInput.next().find('.input').children();
+
+                    if ($input.length) {
+                        setTimeout(function() {
+                            $input.trigger('focus');
+                        }, 0);
+                    }
                 }
 
                 return this;
@@ -145,6 +171,10 @@
                 instance.$autocompleter.css({
                     width: originalInputWidth,
                     minHeight: originalInputHeight
+                });
+
+                instance.$suggestionsList.css({
+                    fontSize: originalInputFontSize
                 });
 
                 instance.$item.css({
@@ -256,14 +286,13 @@
             inputKeydownHandler: function(event) {
                 var key     = keyMap[event.keyCode],
                     value   = instance.$input.children().val(),
-                    item    = {
-                        label: 'label',
-                        value: 'value'
-                    }; // TODO wstawic prawidlowy item z listy sugestii albo to co ktos ma wpisane w polu jest jest taka opcja wlaczona
+                    item    = null;
 
-                if (key === 'ENTER' || (key === 'TAB' && value !== '')) {
+                if ((key === 'ENTER' && value !== '') || (key === 'TAB' && value !== '')) {
                     event.preventDefault();
                 }
+
+                instance.inputCaretIndex = instance.$input.children().caret().begin;
 
                 setTimeout(function() {
                     value = instance.$input.children().val();
@@ -278,15 +307,38 @@
                         };
                     }
 
+                    if (instance.$suggestionsList.children('.focus').length) {
+                        item = {
+                            label: instance.$suggestionsList.children('.focus').attr('data-label'),
+                            value: instance.$suggestionsList.children('.focus').attr('data-value')
+                        }
+                    }
+
                     switch (key) {
                         case 'TAB':
                         case 'ENTER':       publics.itemAdd(item);
                                             break;
 
-                        case 'LEFT-ARROW':  privates.itemFocus.call('PREV', true);
+                        case 'DELETE':
+                        case 'BACKSPACE':   if (instance.inputCaretIndex === 0) {
+                                                privates.itemFocus.call('PREV');
+                                            }
+
                                             break;
 
-                        default:            privates.getSuggestions();
+                        case 'LEFT-ARROW':  if (instance.inputCaretIndex === 0) {
+                                                privates.itemFocus.call('PREV', true);
+                                            }
+
+                                            break;
+
+                        case 'UP-ARROW':    privates.suggestionFocus.call('PREV');
+                                            break;
+
+                        case 'DOWN-ARROW':  privates.suggestionFocus.call('NEXT');
+                                            break;
+
+                        default:            privates.suggestionsGet();
                                             break;
                     }
                 }, 0);
@@ -298,6 +350,7 @@
                 instance.$input.children().val('');
                 instance.$inputMirror.empty();
                 privates.setInputWidth.call(this);
+                privates.suggestionsHide.call(this);
 
                 return this;
             },
@@ -321,6 +374,10 @@
                 privates.itemFocus.call(this);
 
                 return this;
+            },
+
+            itemIsChosen: function(item) {
+                return instance.$itemsList.find('.item[data-label="' + item.label + '"][data-value="' + item.value + '"]').length;
             },
 
             itemFocus: function() {
@@ -371,7 +428,7 @@
                 return this;
             },
 
-            removeClickHandler: function() {
+            itemRemoveClickHandler: function() {
                 var $trigger = $(this),
                     $item = $trigger.parents('.item');
 
@@ -380,13 +437,7 @@
                 return this;
             },
 
-            xhrAbort: function() {
-                if (instance.xhr) {
-                    instance.xhr.abort();
-                }
-            },
-
-            getSuggestions: function() {
+            suggestionsGet: function() {
                 var value = $.trim(instance.$input.children().val()),
                     url = instance.options.ajaxUrl;
 
@@ -397,9 +448,9 @@
                 if (value.length >= instance.options.minCharacters) {
                     clearTimeout(instance.keyTimeout);
 
-                    instance.keyTimeout = setTimeout(function() {
-                        privates.xhrAbort.call(this);
+                    privates.xhrAbort.call(this);
 
+                    instance.keyTimeout = setTimeout(function() {
                         instance.xhr = $.ajax({
                             type: 'get',
                             url: url + value,
@@ -407,35 +458,145 @@
                             beforeSend: function() {
                                 instance.$autocompleter.addClass('loading');
                             }
+                        }).done(function(json) {
+                            privates.jsonParse.call(json);
                         }).always(function() {
                             instance.$autocompleter.removeClass('loading');
-                        }).done(function(json) {
-                            if (typeof(json) === 'object' && json) {
-                                privates.jsonParse.call(json);
-                            }
+                            privates.suggestionsBuild.call(this);
+                            privates.suggestionsShow.call(this);
                         });
                     }, keyLag);
                 }
+            },
+
+            suggestionsBuild: function() {
+                instance.$suggestionsList.empty();
+
+                for (var i = 0; i < instance.options.maxSuggestions; i++) {
+                    var $suggestion = templates.$suggestion.clone(),
+                        suggestion = instance.suggestions[i],
+                        item = {};
+
+                    if (suggestion) {
+                        item = {
+                            label: suggestion.label,
+                                value: suggestion.value
+                        };
+
+                        if (!instance.options.uniqueItems || (instance.options.uniqueItems && !privates.itemIsChosen(item))) {
+                            $suggestion.on('click', privates.suggestionChoose)
+                                       .attr({
+                                           title: suggestion.label,
+                                           'data-label': suggestion.label,
+                                           'data-value': suggestion.value
+                                       }).find('.label').text(suggestion.label);
+
+                            instance.$suggestionsList.append($suggestion);
+                        }
+                    }
+                }
+
+                privates.suggestionFocus.call(this);
+
+                return this;
+            },
+
+            suggestionsShow: function() {
+                var autocompleterHeight = instance.$autocompleter.height();
+
+                if (instance.$suggestionsList.children().length) {
+                    instance.$suggestionsList.removeClass('hide')
+                                             .css({
+                                                 top: autocompleterHeight
+                                             });
+                }
+                else {
+                    privates.suggestionsHide.call(this);
+                }
+
+                return this;
+            },
+
+            suggestionsHide: function() {
+                instance.suggestionFocusIndex = 0;
+
+                instance.$suggestionsList.addClass('hide')
+                                         .empty();
+
+                return this;
+            },
+
+            suggestionFocus: function() {
+                var $suggestion = null,
+                    minIndex    = 0,
+                    maxIndex    = instance.$suggestionsList.children().length - 1;
+
+                if (this === 'PREV') {
+                    instance.suggestionFocusIndex--;
+                }
+                else if (this === 'NEXT') {
+                    instance.suggestionFocusIndex++;
+                }
+
+                if (instance.suggestionFocusIndex < minIndex) {
+                    instance.suggestionFocusIndex = maxIndex;
+                }
+
+                if (instance.suggestionFocusIndex > maxIndex) {
+                    instance.suggestionFocusIndex = minIndex;
+                }
+
+                $suggestion = instance.$suggestionsList.children().eq(instance.suggestionFocusIndex);
+
+                instance.$suggestionsList.children('.focus').removeClass('focus');
+                $suggestion.addClass('focus');
+
+                return this;
+            },
+
+            suggestionChoose: function() {
+                var $suggestion = $(this),
+                    label = $suggestion.attr('data-label'),
+                    value = $suggestion.attr('data-value');
+
+                publics.itemAdd({
+                    label: label,
+                    value: value
+                });
+
+                privates.suggestionsHide.call(this);
+
+                return $suggestion;
             },
 
             jsonParse: function() {
                 var json = this,
                     suggestions = [];
 
-                $.each(json, function() {
-                    suggestions.push({
-                        label: this,
-                        value: this
+                if (typeof(json) === 'object' && json) {
+                    $.each(json, function() {
+                        suggestions.push({
+                            label: this,
+                            value: this
+                        });
                     });
-                });
-
-                instance.suggestions = suggestions;
+                }
 
                 instance.$originalInput.trigger('json-update.autocompleter', json);
 
-                instance.suggestions = instance.$autocompleter.data('suggestions');
+                if (instance.$autocompleter.data('suggestions')) {
+                    suggestions = instance.$autocompleter.data('suggestions');
+                }
+
+                instance.suggestions = suggestions;
 
                 return this;
+            },
+
+            xhrAbort: function() {
+                if (instance.xhr) {
+                    instance.xhr.abort();
+                }
             }
         },
 
@@ -466,6 +627,7 @@
 
                     instance.$originalInput = $originalInput;
                     instance.$autocompleter = $autocompleter;
+                    instance.$suggestionsList = instance.$autocompleter.find('.suggestions-list');
                     instance.$itemsList = instance.$autocompleter.find('.items-list');
                     instance.$item = templates.$item.clone();
                     instance.$input = instance.$autocompleter.find('.input');
@@ -529,15 +691,14 @@
                     value = null,
                     itemCanBeAdded = true;
 
-                if (item instanceof $) {
-                    // TODO: wyciagac z <li> danej sugestii dane
-                }
-                else {
-                    label = $.trim(item.label);
-                    value = $.trim(item.value);
+                if (!item.hasOwnProperty('label') || !item.hasOwnProperty('value')) {
+                    $.error('There\'s something wrong with added item');
                 }
 
-                if (instance.options.uniqueItems && instance.$itemsList.find('.item[data-label="' + item.label + '"][data-value="' + item.value + '"]').length) {
+                label = $.trim(item.label);
+                value = $.trim(item.value);
+
+                if (instance.options.uniqueItems && privates.itemIsChosen(item)) {
                     itemCanBeAdded = false;
                 }
 
@@ -548,7 +709,7 @@
                          .find('.label').text(label).end()
                          .find('.value').attr('name', instance.options.name)
                                         .val(value).end()
-                         .find('.remove').on('click', privates.removeClickHandler);
+                         .find('.remove').on('click', privates.itemRemoveClickHandler);
 
                     if (itemCanBeAdded) {
                         $item.insertBefore(instance.$input);
@@ -644,4 +805,21 @@
 
         return this;
     };
+
+    $.fn.caret = function() {
+        var range = {},
+            selection = null;
+
+        if (this[0].setSelectionRange) {
+            range.begin = this[0].selectionStart;
+            range.end = this[0].selectionEnd;
+        }
+        else if (document.selection && document.selection.createRange) {
+            selection = document.selection.createRange();
+            range.begin = 0 - selection.duplicate().moveStart('character', -100000);
+            range.end = range.begin + selection.text.length;
+        }
+
+        return range;
+    }
 })($);

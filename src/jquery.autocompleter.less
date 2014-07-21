@@ -137,7 +137,10 @@
 @inputBorderRadius: 3px;
 @inputBackground: #fff;
 @inputBorder: #ccc;
+@textColor: #666;
 @fontFamily: Helvetica, Arial, sans-serif;
+@lightBorder: #eee solid 1px;
+@basicBorder: #ddd solid 1px;
 
 .jquery-autocompleter-attached {
     display: none;
@@ -150,7 +153,6 @@
     .border-radius(@inputBorderRadius);
     .box-shadow(inset 0 1px 1px rgba(0,0,0,.075));
     .box-sizing(border-box);
-    .transition(~'border linear .2s, box-shadow linear .2s');
 
     font-family: @fontFamily;
     cursor: text;
@@ -198,10 +200,13 @@
     }
 
     .items-list {
+        .box-sizing(border-box);
+
         display: inline-block;
         margin: 0;
         padding: 2px 2px 0 2px;
         font-size: 0;
+        max-width: 100%;
 
         &:empty {
             padding: 0;
@@ -211,6 +216,7 @@
             #gradient > .vertical(@lightBlue, @darkBlue);
             .border-radius(@inputBorderRadius);
             .box-shadow(inset 0 1px rgba(255,255,255,0.4));
+            .box-sizing(border-box);
             .user-select(none);
             .text-overflow;
 
@@ -221,6 +227,7 @@
             position: relative;
             display: inline-block;
             padding: 0 0.5em;
+            max-width: 100%;
 
             &.focus {
                 #gradient > .vertical(lighten(@lightBlue, 15%), lighten(@darkBlue, 15%));
@@ -292,95 +299,43 @@
         visibility: hidden;
     }
 
+    .suggestions-list {
+        .box-sizing(border-box);
+        .box-shadow(0 1px 1px rgba(0,0,0,0.15));
+        .border-radius(0 0 @inputBorderRadius @inputBorderRadius);
 
-
-
-    ul.chosen,
-    ul.suggestions {
-        .box-shadow(none);
-
+        background-color: @white;
         padding: 0;
         margin: 0;
-        border: 0;
-    }
-
-    ul.chosen {
-        list-style-type: none;
-        margin-bottom: 0 !important;
-
-        & > li {
-            .border-radius(@inputBorderRadius);
-            .box-shadow(inset -1px 0 rgba(255,255,255,0.4));
-            #gradient > .vertical(#4a94b1, #2c7596);
-
-            border: 1px solid #1d5065;
-            position: relative;
-            cursor: default;
-            float: left;
-            padding: 2px 8px !important;
-            margin: 0 2px 2px 0;
-            color: #fff;
-            text-shadow: 0 1px 0px rgba(0, 0, 0, 0.5);
-            word-break: break-all;
-
-            &.deletable {
-                padding-right: 30px !important;
-            }
-
-            a.delete {
-                &:before {
-                    .icon('\e78e');
-                    .opacity(30);
-
-                    color: #000;
-                    text-shadow: none;
-                    position: absolute;
-                    top: 2px;
-                    right: 8px;
-                }
-            }
-
-            &.focus {
-                #gradient > .vertical(#86b3c7, #729fb5);
-            }
-
-            &:hover {
-                .opacity(90);
-            }
-        }
-    }
-
-    ul.suggestions {
-        .box-shadow(0 2px 2px rgba(0,0,0,0.2));
-        .border-radius(@inputBorderRadius);
-
-        border: 1px solid #ccc;
-        display: none;
+        list-style: none;
         position: absolute;
+        border: @basicBorder;
+        left: -1px;
+        right: -1px;
         z-index: 10;
-        word-wrap: break-word;
-        background: #fff;
-        color: #444;
-        text-shadow: none;
 
-        & > li {
-            border-bottom: 1px solid #e3e3e3;
-            padding: 6px 10px;
-            cursor: pointer;
-            list-style-type: none;
-
-            &:hover,
-            &.focus {
-                background: #eee;
-            }
-
-            span {
-                font-weight: bold;
-            }
+        &.hide {
+            display: none;
         }
-    }
 
-    .hide {
-        display: none !important;
+        .suggestion {
+            .text-overflow;
+
+            padding: 0.5em 0.6em;
+            border-top: @lightBorder;
+            color: @textColor;
+            cursor: pointer;
+            display: block;
+
+            &:first-child {
+                border: 0;
+            }
+
+            &.focus {
+                background-color: @darkBlue;
+                color: @white;
+            }
+
+        }
     }
 }
