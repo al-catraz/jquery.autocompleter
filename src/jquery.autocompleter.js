@@ -62,6 +62,14 @@
                                           .append($('<span></span>').addClass('label'))
         },
 
+        specialCharsMap = {
+            '<':'&lt;',
+            '>':'&gt;',
+            '"':'&quot;',
+            '\'':'&apos;',
+            '\\': ''
+        },
+
         keyMap = {
             8:  'BACKSPACE',
             9:  'TAB',
@@ -247,16 +255,22 @@
                     else if (targetIsInput || $target.is('.jquery-autocompleter')) {
                         privates.inputListBlur.call(this);
                     }
+
+                    instance.$originalInput.trigger('input-focus.autocompleter');
                 }
 
                 return this;
             },
 
             autocompleterBlurHandler: function() {
-                instance.$autocompleter.removeClass('focus');
-                privates.inputListBlur.call(this);
-                privates.inputClear.call(this);
-                privates.xhrAbort.call(this);
+                if (!instance.$suggestionsList.is('.mouseover')) {
+                    instance.$autocompleter.removeClass('focus');
+                    privates.inputListBlur.call(this);
+                    privates.inputClear.call(this);
+                    privates.xhrAbort.call(this);
+                }
+
+                instance.$originalInput.trigger('input-blur.autocompleter');
 
                 return this;
             },
@@ -297,15 +311,8 @@
                 setTimeout(function() {
                     value = instance.$input.children().val();
 
-                    instance.$inputMirror.text(value);
+                    instance.$inputMirror.html(value);
                     privates.setInputWidth.call(this);
-
-                    if (instance.options.customItems) {
-                        item = {
-                            label: value,
-                            value: value
-                        };
-                    }
 
                     if (instance.$suggestionsList.children('.focus').length) {
                         item = {
@@ -319,8 +326,13 @@
                         case 'ENTER':       publics.itemAdd(item);
                                             break;
 
+                        case 'ESC':         privates.inputClear.call(this);
+                                            break;
+
                         case 'DELETE':
-                        case 'BACKSPACE':   if (instance.inputCaretIndex === 0) {
+                        case 'BACKSPACE':   privates.suggestionsGet();
+
+                                            if (instance.inputCaretIndex === 0) {
                                                 privates.itemFocus.call('PREV');
                                             }
 
@@ -331,6 +343,8 @@
                                             }
 
                                             break;
+
+                        case 'RIGHT-ARROW': break;
 
                         case 'UP-ARROW':    privates.suggestionFocus.call('PREV');
                                             break;
@@ -351,6 +365,8 @@
                 instance.$inputMirror.empty();
                 privates.setInputWidth.call(this);
                 privates.suggestionsHide.call(this);
+                privates.xhrAbort.call(this);
+                instance.$originalInput.trigger('input-clear.autocompleter');
 
                 return this;
             },
@@ -372,6 +388,23 @@
                 instance.itemFocusIndex = $item.index();
 
                 privates.itemFocus.call(this);
+
+                return this;
+            },
+
+            itemMouseHandler: function(event) {
+                var $suggestion = $(this);
+
+                instance.suggestionFocusIndex = $suggestion.index();
+
+                privates.suggestionFocus.call(this);
+
+                if (event.type === 'mouseenter') {
+                    instance.$suggestionsList.addClass('mouseover');
+                }
+                else {
+                    instance.$suggestionsList.removeClass('mouseover');
+                }
 
                 return this;
             },
@@ -423,6 +456,7 @@
 
                 if ($item.is('.item')) {
                     $item.addClass('focus');
+                    instance.$originalInput.trigger('item-focus.autocompleter', $item);
                 }
 
                 return this;
@@ -439,7 +473,20 @@
 
             suggestionsGet: function() {
                 var value = $.trim(instance.$input.children().val()),
-                    url = instance.options.ajaxUrl;
+                    url = instance.options.ajaxUrl,
+                    item = {};
+
+                instance.$suggestionsList.empty();
+
+                if (instance.options.customItems) {
+                    item = {
+                        label: value,
+                        value: value
+                    };
+
+                    privates.suggestionAdd(item);
+                    privates.suggestionsShow.call(this);
+                }
 
                 if (!url) {
                     $.error('No ajax url specified');
@@ -460,43 +507,29 @@
                             }
                         }).done(function(json) {
                             privates.jsonParse.call(json);
-                        }).always(function() {
-                            instance.$autocompleter.removeClass('loading');
                             privates.suggestionsBuild.call(this);
                             privates.suggestionsShow.call(this);
+                        }).always(function() {
+                            instance.$autocompleter.removeClass('loading');
                         });
                     }, keyLag);
                 }
             },
 
             suggestionsBuild: function() {
-                instance.$suggestionsList.empty();
-
                 for (var i = 0; i < instance.options.maxSuggestions; i++) {
-                    var $suggestion = templates.$suggestion.clone(),
-                        suggestion = instance.suggestions[i],
+                    var suggestion = instance.suggestions[i],
                         item = {};
 
                     if (suggestion) {
                         item = {
                             label: suggestion.label,
-                                value: suggestion.value
+                            value: suggestion.value
                         };
 
-                        if (!instance.options.uniqueItems || (instance.options.uniqueItems && !privates.itemIsChosen(item))) {
-                            $suggestion.on('click', privates.suggestionChoose)
-                                       .attr({
-                                           title: suggestion.label,
-                                           'data-label': suggestion.label,
-                                           'data-value': suggestion.value
-                                       }).find('.label').text(suggestion.label);
-
-                            instance.$suggestionsList.append($suggestion);
-                        }
+                        privates.suggestionAdd(item);
                     }
                 }
-
-                privates.suggestionFocus.call(this);
 
                 return this;
             },
@@ -509,6 +542,8 @@
                                              .css({
                                                  top: autocompleterHeight
                                              });
+
+                    privates.suggestionFocus.call(this);
                 }
                 else {
                     privates.suggestionsHide.call(this);
@@ -522,6 +557,34 @@
 
                 instance.$suggestionsList.addClass('hide')
                                          .empty();
+
+                return this;
+            },
+
+            suggestionAdd: function(suggestion) {
+                var $suggestion = templates.$suggestion.clone(),
+                    escapedSuggestion = {
+                        label: suggestion.label,
+                        value: suggestion.value
+                    };
+
+                for (var key in specialCharsMap) {
+                    escapedSuggestion.label = escapedSuggestion.label.split(key).join(specialCharsMap[key]);
+                    escapedSuggestion.value = escapedSuggestion.value.split(key).join(specialCharsMap[key]);
+                }
+
+                if ((!instance.options.uniqueItems || (instance.options.uniqueItems && !privates.itemIsChosen(escapedSuggestion)))
+                    && escapedSuggestion.label !== '' && escapedSuggestion.value !== '') {
+                    $suggestion.on('click', privates.suggestionChoose)
+                               .on('mouseenter mouseleave', privates.itemMouseHandler)
+                               .attr({
+                                   title: suggestion.label,
+                                   'data-label': escapedSuggestion.label,
+                                   'data-value': escapedSuggestion.value
+                               }).find('.label').html(suggestion.label);
+
+                    instance.$suggestionsList.append($suggestion);
+                }
 
                 return this;
             },
@@ -594,9 +657,11 @@
             },
 
             xhrAbort: function() {
-                if (instance.xhr) {
-                    instance.xhr.abort();
-                }
+                setTimeout(function() {
+                    if (instance.xhr) {
+                        instance.xhr.abort();
+                    }
+                }, 0);
             }
         },
 
@@ -687,28 +752,39 @@
 
             itemAdd: function(item) {
                 var $item = instance.$item.clone(),
-                    label = null,
-                    value = null,
-                    itemCanBeAdded = true;
+                    itemCanBeAdded = true,
+                    escapedItem = {};
+
+                if (!item) {
+                    privates.inputClear.call(this);
+                    privates.xhrAbort.call(this);
+
+                    return false;
+                }
 
                 if (!item.hasOwnProperty('label') || !item.hasOwnProperty('value')) {
                     $.error('There\'s something wrong with added item');
                 }
 
-                label = $.trim(item.label);
-                value = $.trim(item.value);
+                escapedItem.label = item.label;
+                escapedItem.value = item.value;
+
+                for (var key in specialCharsMap) {
+                    escapedItem.label = escapedItem.label.split(key).join(specialCharsMap[key]);
+                    escapedItem.value = escapedItem.value.split(key).join(specialCharsMap[key]);
+                }
 
                 if (instance.options.uniqueItems && privates.itemIsChosen(item)) {
                     itemCanBeAdded = false;
                 }
 
-                if (label !== '' && value !== '') {
-                    $item.attr('data-label', label)
-                         .attr('data-value', value)
+                if (escapedItem.label !== '' && escapedItem.value !== '') {
+                    $item.attr('data-label', escapedItem.label)
+                         .attr('data-value', escapedItem.value)
                          .on('click', privates.itemClickHandler)
-                         .find('.label').text(label).end()
+                         .find('.label').html(item.label).end()
                          .find('.value').attr('name', instance.options.name)
-                                        .val(value).end()
+                                        .val(item.value).end()
                          .find('.remove').on('click', privates.itemRemoveClickHandler);
 
                     if (itemCanBeAdded) {
