@@ -1,4 +1,4 @@
-# [jquery.autocompleter]
+# jquery.autocompleter
 
 Easy-to-use jquery plugin for autocompletion.
 
