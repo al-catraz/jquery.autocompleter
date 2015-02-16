@@ -10,7 +10,7 @@
 </head>
 <body>
     <form method="post" action="">
-        <input type="text" name="data_array[]" id="dupa" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Wpisz coś" data-autocompleter="true" data-ajax-url="http://www.goldenline.pl.172.17.4.70.xip.io/GoldenLine/web/app_dev.php/ajax-json?method=Profile.Experience.GetCompanyNameFA&name=" data-custom-items="true" data-unique-items="true" />
+        <input type="text" name="data_array[]" id="dupa" style="font-size: 13px; padding: 6px; width: 200px; border: 1px solid black;" placeholder="Company name..." data-autocompleter="true" data-ajax-url="http://www.goldenline.pl/ajax-json?method=Profile.Experience.GetCompanyNameFA&name=" data-custom-items="true" data-unique-items="true" />
     </form>
 
     <script src="../dist/jquery.min.js"></script>
@@ -31,21 +31,38 @@
                 }
 
                 $autocompleter.data('suggestions', suggestions);
+
+                console.log('json updated', suggestions);
             }
 
             function itemAddHandler(event, item) {
-                console.log('dodany item', item)
+                console.log('item added', item)
             }
 
             function itemRemoveHandler(event, item) {
-                console.log('usuniety item', item)
+                console.log('item removed', item)
+            }
+
+            function inputBlurHandler(event) {
+                console.log('input blurred');
+            }
+
+            function inputClearHandler(event) {
+                console.log('input cleared');
+            }
+
+            function itemFocusHandler(event, item) {
+                console.log('item focused', item);
             }
 
             $(function() {
                 $('input[data-autocompleter="true"]').autocompleter()
                                                      .on('json-update.autocompleter', jsonUpdateHandler)
                                                      .on('item-add.autocompleter', itemAddHandler)
-                                                     .on('item-remove.autocompleter', itemRemoveHandler);
+                                                     .on('item-remove.autocompleter', itemRemoveHandler)
+                                                     .on('item-focus.autocompleter', itemFocusHandler)
+                                                     .on('input-blur.autocompleter', inputBlurHandler)
+                                                     .on('input-clear.autocompleter', inputClearHandler);
             });
         }());
     </script>
