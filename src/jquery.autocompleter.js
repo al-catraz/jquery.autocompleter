@@ -150,6 +150,9 @@
                             value:  $suggestion.attr('data-value'),
                             data:   $suggestion.data()
                         });
+
+                        instance.$suggestionsList.empty();
+                        privates.suggestionsHide.call($originalInput);
                     }
                 }
 
@@ -870,7 +873,7 @@
 
                 instance.suggestionFocusIndex = 0;
 
-                instance.$suggestionsList.addClass('hide').empty();
+                instance.$suggestionsList.addClass('hide');
 
                 return this;
             },
