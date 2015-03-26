@@ -21,7 +21,7 @@ Each option should be defined as HTML attribute of input element, on which autoc
 Url to AJAX data provider, which is used for suggestions generation.
 
 ````bash
-<input type="text" name="data_array[]" id="company-autocompleter" placeholder="Company name..." data-ajax-url="data_provider.json?query=" />
+<input type="text" name="data_array[]" id="company-autocompleter" data-ajax-url="data_provider.json?query=" />
 ````
 
 #####data-custom-items (default: false)
@@ -29,7 +29,7 @@ Url to AJAX data provider, which is used for suggestions generation.
 Allows selecting custom suggestions (outside of AJAX suggestions list).
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-custom-items="true" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-custom-items="true" />
 ````
 
 #####data-unique-items (default: false)
@@ -37,7 +37,7 @@ Allows selecting custom suggestions (outside of AJAX suggestions list).
 Prevents selected items from duplicating.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-unique-items="true" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-unique-items="true" />
 ````
 
 #####data-single-item (default: false)
@@ -45,7 +45,7 @@ Prevents selected items from duplicating.
 Allows only one item to be selected at a time.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-single-item="true" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-single-item="true" />
 ````
 
 #####data-min-characters (default: 2)
@@ -53,7 +53,7 @@ Allows only one item to be selected at a time.
 Minimum amount of characters needed to be provided to input to initialize AJAX request.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-min-characters="5" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-min-characters="5" />
 ````
 
 #####data-max-suggestions (default: 10)
@@ -61,7 +61,7 @@ Minimum amount of characters needed to be provided to input to initialize AJAX r
 Maximum amount of suggestions displayed on a list.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-max-suggestions="5" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-max-suggestions="5" />
 ````
 
 #####data-separators (default: [])
@@ -69,7 +69,7 @@ Maximum amount of suggestions displayed on a list.
 Array of characters which when pressed makes focused suggestion selected.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-separators="[',', ' ']" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-separators="[',', ' ']" />
 ````
 
 #####data-selected-items (default: false)
@@ -77,7 +77,7 @@ Array of characters which when pressed makes focused suggestion selected.
 Array of objects which are inserted into autocompleter when initialized.
 
 ````bash
-<input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." data-selected-items="[{label: 'Item 1', value: 'item_1'}, {label: 'Item 2', value: 'item_2'}]" />
+<input type="text" id="company-autocompleter" name="data_array[]" data-selected-items="[{label: 'Item 1', value: 'item_1'}, {label: 'Item 2', value: 'item_2'}]" />
 ````
 
 
