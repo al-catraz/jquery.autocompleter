@@ -1,4 +1,4 @@
-/* jslint evil: true */
+/* global $ */
 
 (function($) {
     /**
@@ -80,28 +80,29 @@
 
                         templates = {
                             $autocompleter: $('<section></section>').addClass('jquery-autocompleter')
-                                                .append($('<section></section>').addClass('widget')
-                                    .append($('<ul></ul>').addClass('items-list')
-                                        .append($('<li></li>').addClass('input')
-                                            .append($('<input/>').attr({
-                                                type: 'text',
-                                                autocomplete: 'off'
-                                            })
-                                            )
-                                        )
-                                    )
-                                )
-                                                .append($('<ul></ul>').addClass('suggestions-list hide'))
-                                                .append($('<span></span>').addClass('input-mirror')),
+                                                                    .append($('<section></section>').addClass('widget')
+                                                                                                    .append($('<ul></ul>').addClass('items-list')
+                                                                                                                          .append($('<li></li>').addClass('input')
+                                                                                                                                                .append($('<input/>').attr({
+                                                                                                                                                    'type': 'text',
+                                                                                                                                                    'autocomplete': 'off',
+                                                                                                                                                    'class': 'jquery-autocompleter-input'
+                                                                                                                                                })
+                                                                                                                                            )
+                                                                                                                                        )
+                                                                                                                                    )
+                                                                                                                                )
+                                                                                                                                .append($('<ul></ul>').addClass('suggestions-list hide'))
+                                                                                                                                                      .append($('<span></span>').addClass('input-mirror')),
 
                             $item:          $('<li></li>').addClass('item')
-                                                .append($('<span></span>').addClass('label'))
-                                                .append($('<a></a>').addClass('remove'))
-                                                .append($('<input/>').addClass('value')
-                                    .attr('type', 'hidden')),
+                                                          .append($('<span></span>').addClass('label'))
+                                                                                    .append($('<a></a>').addClass('remove'))
+                                                                                                        .append($('<input/>').addClass('value')
+                                                                                                                             .attr('type', 'hidden')),
 
                             $suggestion:    $('<li></li>').addClass('suggestion')
-                                                .append($('<span></span>').addClass('label'))
+                                                          .append($('<span></span>').addClass('label'))
                         };
 
                     $input.data({
@@ -132,9 +133,25 @@
              */
             documentClickHandler: function(event) {
                 var $target                 = $(event.target),
-                    $autocompleter          = $('.jquery-autocompleter.focus'),
-                    $originalInput          = $autocompleter.prev(),
-                    $targetOriginalInput    = [];
+                    $targetOriginalInput    = [],
+                    $autocompleter          = $('.jquery-autocompleter.last-active'),
+                    $originalInput          = $(),
+                    instance                = null,
+                    $suggestion             = null;
+
+                if ($autocompleter.length) {
+                    $originalInput = $autocompleter.prev();
+                    instance = $originalInput.data('instance');
+                    $suggestion = instance.$suggestionsList.children('.focus');
+
+                    if (!$target.is('.jquery-autocompleter') && !$target.parents('.jquery-autocompleter').length && $suggestion.length) {
+                        publics.itemAdd.call($originalInput, {
+                            label:  $suggestion.attr('data-label'),
+                            value:  $suggestion.attr('data-value'),
+                            data:   $suggestion.data()
+                        });
+                    }
+                }
 
                 if ((!$target.is('.jquery-autocompleter') && !$target.parents('.jquery-autocompleter').length && $originalInput.length) ||
                     ($autocompleter.is('.single') && $target.parents('.suggestions-list').length)) {
@@ -151,6 +168,7 @@
 
                 return this;
             },
+
 
             /**
              * Handler for keydown event on a whole document, it handles items deletion and traversing
@@ -171,19 +189,19 @@
                     switch (key) {
                         case 'DELETE':
                         case 'BACKSPACE':   privates.itemKeydownDelete.call($originalInput, event);
-                            break;
+                                            break;
 
                         case 'LEFT-ARROW':  if (!instance.$input.is('.focus')) {
-                            privates.itemFocus.call($originalInput, 'PREV');
-                        }
+                                                privates.itemFocus.call($originalInput, 'PREV');
+                                            }
 
-                            break;
+                                            break;
 
                         case 'RIGHT-ARROW': if (!instance.$input.is('.focus')) {
-                            privates.itemFocus.call($originalInput, 'NEXT');
-                        }
+                                                privates.itemFocus.call($originalInput, 'NEXT');
+                                            }
 
-                            break;
+                                            break;
 
                         default:            break;
                     }
@@ -216,7 +234,7 @@
                 $item.insertBefore(instance.$input);
 
                 itemPaddingBottom = parseInt($item.css('margin-bottom').replace('px', ''), 10);
-                lineHeight = Math.round((originalInputHeight - itemsListPaddingTop - itemPaddingBottom - (originalInputBorder * 2)) * 1.35);
+                lineHeight = Math.round((originalInputHeight - itemsListPaddingTop - itemPaddingBottom - (originalInputBorder * 2)));
 
                 $item.remove();
 
@@ -236,7 +254,7 @@
                 });
 
                 instance.$input.children().css({
-                    lineHeight: lineHeight + 'px'
+                    lineHeight: (lineHeight + itemPaddingBottom) + 'px'
                 });
 
                 instance.$input.children().add(instance.$inputMirror).css({
@@ -261,16 +279,16 @@
 
                 instance.options.name = instance.$originalInput.attr('name');
 
-                if (!instance.options.name.match(/\[\]$/)) {
-                    instance.options.name += '[]';
-                }
+                instance.$originalInput.removeAttr('name')
+                    .attr('data-name', instance.options.name);
 
-                if (!instance.options.name.match(/\[\]$/)) {
-                    instance.options.name += '[]';
-                }
-
-                instance.$originalInput.removeAttr('name');
                 $.extend(instance.options, instance.$originalInput.data());
+
+                if (typeof(instance.options.name) !== 'undefined' && !instance.options.singleItem) {
+                    if (!instance.options.name.match(/\[\]$/)) {
+                        instance.options.name += '[]';
+                    }
+                }
 
                 return this;
             },
@@ -357,7 +375,10 @@
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance');
 
+                $('.jquery-autocompleter.last-active').removeClass('last-active');
+
                 instance.$autocompleter.add(instance.$itemsList.find('.focus')).removeClass('focus');
+                instance.$autocompleter.addClass('last-active');
 
                 if (!instance.$suggestionsList.is('.mouseover') && !instance.$autocompleter.is('.mouseover')) {
                     privates.inputListBlur.call($originalInput);
@@ -461,9 +482,9 @@
             inputKeydownHandler: function(event) {
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance'),
+                    $suggestion     = instance.$suggestionsList.children('.focus'),
                     key             = keyMap[event.keyCode],
-                    value           = instance.$input.children().val(),
-                    item            = null;
+                    value           = instance.$input.children().val();
 
                 if (key === 'ENTER' || (key === 'TAB' && value !== '')) {
                     event.preventDefault();
@@ -477,49 +498,46 @@
                     instance.$inputMirror.html(value);
                     privates.setInputWidth.call($originalInput);
 
-                    if (instance.$suggestionsList.children('.focus').length) {
-                        item = {
-                            label: instance.$suggestionsList.children('.focus').attr('data-label'),
-                            value: instance.$suggestionsList.children('.focus').attr('data-value')
-                        }
-                    }
-
                     switch (key) {
                         case 'TAB':
                         case 'ENTER':       if (instance.$suggestionsList.is(':visible')) {
-                            publics.itemAdd.call($originalInput, item);
-                        }
+                                                privates.suggestionChoose.call($suggestion);
+                                            }
 
-                            break;
+                                            break;
 
                         case 'ESC':         privates.inputClear.call($originalInput);
-                            break;
+
+                                            break;
 
                         case 'DELETE':
                         case 'BACKSPACE':   privates.suggestionsGet.call($originalInput);
 
-                            if (instance.inputCaretIndex === 0) {
-                                privates.itemFocus.call($originalInput, 'PREV');
-                            }
+                                            if (instance.inputCaretIndex === 0) {
+                                                privates.itemFocus.call($originalInput, 'PREV');
+                                            }
 
-                            break;
+                                            break;
 
                         case 'LEFT-ARROW':  if (instance.inputCaretIndex === 0) {
-                            privates.itemFocus.call($originalInput, 'PREV');
-                        }
+                                                privates.itemFocus.call($originalInput, 'PREV');
+                                            }
 
-                            break;
+                                            break;
 
                         case 'RIGHT-ARROW': break;
 
                         case 'UP-ARROW':    privates.suggestionFocus.call($originalInput, 'PREV');
-                            break;
+
+                                            break;
 
                         case 'DOWN-ARROW':  privates.suggestionFocus.call($originalInput, 'NEXT');
-                            break;
+
+                                            break;
 
                         default:            privates.suggestionsGet.call($originalInput);
-                            break;
+
+                                            break;
                     }
                 }, 0);
 
@@ -679,16 +697,16 @@
                     $item = directionOrItem;
                 }
 
-                if (!focusTriggered) {
+                if (!focusTriggered && !instance.$autocompleter.is('.disabled')) {
                     instance.$input.children().trigger('blur');
                     instance.$autocompleter.addClass('focus');
                 }
 
                 privates.inputListBlur.call($originalInput);
 
-                if ($item.is('.item')) {
+                if ($item.is('.item') && !instance.$autocompleter.is('.disabled')) {
                     $item.addClass('focus');
-                    instance.$originalInput.trigger('item-focus.autocompleter', $item);
+                    instance.$originalInput.trigger('item-focus.autocompleter', [$item]);
                 }
 
                 return this;
@@ -740,7 +758,10 @@
                 if (instance.options.customItems) {
                     item = {
                         label: value,
-                        value: value
+                        value: value,
+                        data: {
+                            'custom-item': true
+                        }
                     };
 
                     privates.suggestionAdd.call($originalInput, item);
@@ -757,6 +778,10 @@
                             type: 'get',
                             url: url + value,
                             dataType: 'json',
+                            crossDomain: true,
+                            xhrFields: {
+                                withCredentials: true
+                            },
                             beforeSend: function() {
                                 instance.$autocompleter.addClass('loading');
                             }
@@ -791,8 +816,9 @@
 
                     if (suggestion) {
                         item = {
-                            label: suggestion.label,
-                            value: suggestion.value
+                            label:  suggestion.label,
+                            value:  suggestion.value,
+                            data:   suggestion.data
                         };
 
                         privates.suggestionAdd.call($originalInput, item);
@@ -817,9 +843,9 @@
 
                 if (instance.$suggestionsList.children().length) {
                     instance.$suggestionsList.removeClass('hide')
-                        .css({
-                            top: autocompleterHeight
-                        });
+                                             .css({
+                                                 top: autocompleterHeight
+                                             });
 
                     privates.suggestionFocus.call($originalInput);
                 }
@@ -844,7 +870,7 @@
 
                 instance.suggestionFocusIndex = 0;
 
-                instance.$suggestionsList.addClass('hide');
+                instance.$suggestionsList.addClass('hide').empty();
 
                 return this;
             },
@@ -884,12 +910,16 @@
                         mouseenter: privates.suggestionMouseHandler,
                         mouseleave: privates.suggestionMouseHandler
                     })
-                        .attr({
-                            title:          suggestion.label,
-                            'data-label':   escapedSuggestion.label,
-                            'data-value':   escapedSuggestion.value
-                        })
-                        .find('.label').html(suggestion.label);
+                    .attr({
+                        title:          suggestion.label,
+                        'data-label':   escapedSuggestion.label,
+                        'data-value':   escapedSuggestion.value
+                    })
+                    .find('.label').html(suggestion.label);
+
+                    if (typeof(suggestion.data) !== 'undefined') {
+                        $suggestion.data(suggestion.data);
+                    }
 
                     instance.$suggestionsList.append($suggestion);
                 }
@@ -948,14 +978,13 @@
                 var $suggestion     = $(this),
                     $autocompleter  = $suggestion.parents('.jquery-autocompleter'),
                     $originalInput  = $autocompleter.prev(),
-                    instance        = $originalInput.data('instance'),
-                    label           = $suggestion.attr('data-label'),
-                    value           = $suggestion.attr('data-value');
+                    instance        = $originalInput.data('instance');
 
                 if (instance.$suggestionsList.is(':visible')) {
                     publics.itemAdd.call($originalInput, {
-                        label: label,
-                        value: value
+                        label:  $suggestion.attr('data-label'),
+                        value:  $suggestion.attr('data-value'),
+                        data:   $suggestion.data()
                     });
 
                     privates.suggestionsHide.call($originalInput);
@@ -981,13 +1010,13 @@
                 if (typeof(json) === 'object' && json) {
                     $.each(json, function() {
                         suggestions.push({
-                            label: this,
-                            value: this
+                            label: this.label,
+                            value: this.value
                         });
                     });
                 }
 
-                instance.$originalInput.trigger('json-update.autocompleter', json);
+                instance.$originalInput.trigger('json-update.autocompleter', [json]);
 
                 if (instance.$originalInput.data('suggestions')) {
                     suggestions = instance.$originalInput.data('suggestions');
@@ -1031,18 +1060,9 @@
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance'),
                     $suggestion     = instance.$suggestionsList.children('.focus'),
-                    value           = instance.$input.children().val(),
-                    slicedLabel     = null,
-                    slicedValue     = null;
+                    value           = instance.$input.children().val();
 
                 if ($.inArray(value.substr(value.length - 1), instance.options.separators) !== -1) {
-                    /*slicedLabel = $suggestion.attr('data-label').slice(0, -1),
-                     slicedValue = $suggestion.attr('data-value').slice(0, -1);
-
-                     $suggestion.attr('data-label', slicedLabel)
-                     .attr('data-value', slicedValue)
-                     .find('.label').html(slicedLabel);
-                     */
                     privates.suggestionChoose.call($suggestion);
                 }
 
@@ -1096,11 +1116,12 @@
                     instance.$widget.addClass(classes);
 
                     instance.$input.children().attr('placeholder', placeholder)
-                        .on({
-                            blur:     privates.inputBlurHandler.bind($originalInput),
-                            focus:    privates.inputFocusHandler.bind($originalInput),
-                            keydown:  privates.inputKeydownHandler.bind($originalInput)
-                        });
+                                              .on({
+                                                  blur:     privates.inputBlurHandler.bind($originalInput),
+                                                  focus:    privates.inputFocusHandler.bind($originalInput),
+                                                  keydown:  privates.inputKeydownHandler.bind($originalInput),
+                                                  paste:    privates.inputKeydownHandler.bind($originalInput)
+                                              });
 
                     if (instance.$originalInput.is(':disabled')) {
                         publics.disable.call(this);
@@ -1110,14 +1131,14 @@
                         instance.$autocompleter.addClass('single');
                     }
 
-                    if (instance.options.selectedItems) {
+                    if (instance.options.selectedItems && instance.options.selectedItems instanceof Object) {
                         for (var i = 0; i < instance.options.selectedItems.length; i++) {
                             var item = {
                                 label: (instance.options.selectedItems[i]['label'] || instance.options.selectedItems[i]['name']), // ac.js hack start
                                 value: instance.options.selectedItems[i]['value']
                             };
 
-                            publics.itemAdd.call(instance.$originalInput, item);
+                            publics.itemAdd.call(instance.$originalInput, item, true);
                         }
                     }
                 }
@@ -1153,8 +1174,9 @@
                     instance        = $originalInput.data('instance');
 
                 instance.$autocompleter.remove();
-                instance.$originalInput.removeClass('jquery-autocompleter-attached');
-                instance.$originalInput.attr('name', instance.options.name);
+                instance.$originalInput.removeClass('jquery-autocompleter-attached')
+                                       .attr('name', instance.options.name)
+                                       .removeAttr('data-name');
 
                 return this;
             },
@@ -1165,9 +1187,10 @@
              * @method itemAdd
              * @memberOf jQuery.fn.autocompleter
              * @param {object} Item
+             * @param {boolean} Is item added programmatic (data-selected-items context)
              * @return {jquery} Chainable jQuery object
              */
-            itemAdd: function(item) {
+            itemAdd: function(item, programmatic) {
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance'),
                     $item           = instance.$item.clone(),
@@ -1197,21 +1220,29 @@
                 }
 
                 if (item.label !== '' && item.value !== '') {
-                    $item.attr('data-label', item.label)
-                        .attr('data-value', item.value)
-                        .on('click', privates.itemClickHandler)
-                        .find('.label').html(item.label).end()
-                        .find('.value').attr('name', instance.options.name)
-                        .val(item.value).end()
-                        .find('.remove').on('click', privates.itemRemoveClickHandler);
+                    $item.attr({
+                        'data-label': item.label,
+                        'data-value': item.value
+                    })
+                    .on('click', privates.itemClickHandler)
+                    .find('.label').html(item.label).end()
+                    .find('.value').attr('name', instance.options.name)
+                    .val(item.value).end()
+                    .find('.remove').on('click', privates.itemRemoveClickHandler);
+
+                    if (typeof(item.data) !== 'undefined') {
+                        $item.data(item.data);
+                    }
 
                     if (itemCanBeAdded) {
                         $item.insertBefore(instance.$input);
-                        instance.$originalInput.trigger('item-add.autocompleter', $item);
+                        instance.$originalInput.trigger('item-add.autocompleter', [$item]);
 
                         instance.itemFocusIndex = instance.$itemsList.children(':not(.input)').length;
 
-                        instance.$input.children().trigger('focus');
+                        if (!programmatic) {
+                            instance.$input.children().trigger('focus');
+                        }
                     }
                 }
 
@@ -1248,7 +1279,7 @@
                 if ($item.length) {
                     $item.remove();
                     privates.setInputWidth.call(this);
-                    instance.$originalInput.trigger('item-remove.autocompleter', $item);
+                    instance.$originalInput.trigger('item-remove.autocompleter', [$item]);
                     instance.$input.children().trigger('focus');
 
                     instance.itemFocusIndex = instance.$itemsList.children(':not(.input)').length;
@@ -1299,7 +1330,7 @@
              *
              * @method getValues
              * @memberOf jQuery.fn.autocompleter
-             * @return {object} Array of values
+             * @return {jquery} Chainable jQuery object
              */
             clear: function() {
                 var $originalInput  = $(this),
@@ -1311,6 +1342,13 @@
                 return this;
             },
 
+            /**
+             * Disable autocompleter widget
+             *
+             * @method disable
+             * @memberOf jQuery.fn.autocompleter
+             * @return {jquery} Chainable jQuery object
+             */
             disable: function() {
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance');
@@ -1321,6 +1359,13 @@
                 return this;
             },
 
+            /**
+             * Enable autocompleter widget
+             *
+             * @method enable
+             * @memberOf jQuery.fn.autocompleter
+             * @return {jquery} Chainable jQuery object
+             */
             enable: function() {
                 var $originalInput  = $(this),
                     instance        = $originalInput.data('instance');
@@ -1359,6 +1404,13 @@
         return this;
     };
 
+    /**
+     * jQuery method returning caret position within input element
+     *
+     * @name Caret
+     * @memberOf jQuery.fn
+     * @return {jquery} range
+     */
     $.fn.caret = function() {
         var range = {},
             selection = null;

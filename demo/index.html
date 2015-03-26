@@ -9,8 +9,16 @@
     <link href="../src/jquery.autocompleter.less" rel="stylesheet/less" type="text/css" />
 </head>
 <body>
+    <style>
+        #company-autocompleter {
+            font-size: 13px;
+            padding: 6px;
+            width: 200px;
+        }
+    </style>
+
     <form method="post" action="">
-        <input type="text" name="data_array[]" id="company-autocompleter" style="font-size: 13px; padding: 6px; width: 200px;" placeholder="Company name..." data-autocompleter="true" data-custom-items="true" data-unique-items="true" />
+        <input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name (e.g. Golden)" data-ajax-url="data_provider.json?query=" />
     </form>
 
     <script src="../dist/jquery.min.js"></script>
@@ -20,27 +28,19 @@
     <script>
         (function() {
             function jsonUpdateHandler(event, json) {
-                var $autocompleter = $(event.target).next(),
-                    suggestions = [];
-
-                for (var i = 0; i < json.length; i++) {
-                    suggestions.push({
-                        label: json[i].name,
-                        value: json[i].id
-                    });
-                }
-
-                $autocompleter.data('suggestions', suggestions);
-
-                console.log('json updated', suggestions);
+                console.log('json updated', json);
             }
 
-            function itemAddHandler(event, item) {
-                console.log('item added', item)
+            function itemAddHandler(event, $item) {
+                console.log('item added', $item)
             }
 
-            function itemRemoveHandler(event, item) {
-                console.log('item removed', item)
+            function itemRemoveHandler(event, $item) {
+                console.log('item removed', $item)
+            }
+
+            function itemFocusHandler(event, $item) {
+                console.log('item focused', $item);
             }
 
             function inputBlurHandler(event) {
@@ -51,18 +51,14 @@
                 console.log('input cleared');
             }
 
-            function itemFocusHandler(event, item) {
-                console.log('item focused', item);
-            }
-
             $(function() {
-                $('input[data-autocompleter="true"]').autocompleter()
-                                                     .on('json-update.autocompleter', jsonUpdateHandler)
-                                                     .on('item-add.autocompleter', itemAddHandler)
-                                                     .on('item-remove.autocompleter', itemRemoveHandler)
-                                                     .on('item-focus.autocompleter', itemFocusHandler)
-                                                     .on('input-blur.autocompleter', inputBlurHandler)
-                                                     .on('input-clear.autocompleter', inputClearHandler);
+                $('#company-autocompleter').autocompleter()
+                                           .on('json-update.autocompleter', jsonUpdateHandler)
+                                           .on('item-add.autocompleter', itemAddHandler)
+                                           .on('item-remove.autocompleter', itemRemoveHandler)
+                                           .on('item-focus.autocompleter', itemFocusHandler)
+                                           .on('input-blur.autocompleter', inputBlurHandler)
+                                           .on('input-clear.autocompleter', inputClearHandler);
             });
         }());
     </script>
