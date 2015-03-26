@@ -242,7 +242,7 @@ $('#company-autocompleter').autocompleter('clear');
 Disable autocompleter widget
 
 ````bash
-$('#company-autocompleter').autocompleter('getTypedText');
+$('#company-autocompleter').autocompleter('disable');
 ````
 
 #####enable()
