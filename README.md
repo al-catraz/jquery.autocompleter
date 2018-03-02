@@ -4,93 +4,146 @@ Easy-to-use jquery plugin for autocompletion.
 
 ### Usage example
 
-jQuery.autocompleter can be attached to any text input. It clones most of styles from input (especially it's size). 
+jQuery.autocompleter can be attached to any text input and it clones most of styles from source input.
 
-````bash
+```html
 <input type="text" id="company-autocompleter" name="data_array[]" placeholder="Company name..." />
-
+```
+```js
 $('#company-autocompleter').autocompleter();
-````
+```
 
 ### Options
 
-Each option should be defined as HTML attribute of input element, on which autocompleter is initialized. Options are allowed to be mixed.
+Each option should be defined as HTML attribute of input element, on which autocompleter is initialized. Options can be mixed freely.
 
-#####data-ajax-url (default: false)
+##### data-ajax-url (default: false)
 
 Url to AJAX data provider, which is used for suggestions generation.
 
-````bash
+```html
 <input type="text" name="data_array[]" id="company-autocompleter" data-ajax-url="data_provider.json?query=" />
-````
+```
 
-#####data-custom-items (default: false)
+Expected output data format is:
+
+```json
+[
+    {
+        "label": "GoldenLine Sp. z o.o.",
+        "value":"1"
+    }, {
+        "label":"GoldenSubmarine Sp. z o.o.",
+        "value":"2"
+    }
+]
+```
+
+##### data-custom-items (default: false)
 
 Allows selecting custom suggestions (outside of AJAX suggestions list).
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-custom-items="true" />
 ````
 
-#####data-unique-items (default: false)
+##### data-custom-content-prefix (default: false)
+
+Prepends any string before custom item label.
+
+````html
+<input type="text" id="company-autocompleter" name="data_array[]" data-custom-content-prefix="Add new item - " />
+````
+
+##### data-custom-content-prefix (default: false)
+
+Appends any string after custom item label.
+
+````html
+<input type="text" id="company-autocompleter" name="data_array[]" data-custom-content-sufix=" - add new item" />
+````
+
+##### data-unique-items (default: false)
 
 Prevents selected items from duplicating.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-unique-items="true" />
 ````
 
-#####data-single-item (default: false)
+##### data-single-item (default: false)
 
 Allows only one item to be selected at a time.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-single-item="true" />
 ````
 
-#####data-min-characters (default: 2)
+##### data-min-characters (default: 2)
 
 Minimum amount of characters needed to be provided to input to initialize AJAX request.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-min-characters="5" />
 ````
 
-#####data-max-suggestions (default: 10)
+##### data-max-suggestions (default: 10)
 
 Maximum amount of suggestions displayed on a list.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-max-suggestions="5" />
 ````
 
-#####data-separators (default: [])
+##### data-max-items (default: false)
+
+Maximum amount of chosen items.
+
+````html
+<input type="text" id="company-autocompleter" name="data_array[]" data-max-items="3" />
+````
+
+##### data-separators (default: [])
 
 Array of characters which when pressed makes focused suggestion selected.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-separators="[',', ' ']" />
 ````
 
-#####data-selected-items (default: false)
+##### data-force-capitalize (default: false)
+
+Forces items to be capitalized when chosen.
+
+````html
+<input type="text" id="company-autocompleter" name="data_array[]" data-force-capitalize="true" />
+````
+
+##### data-selected-items (default: false)
 
 Array of objects which are inserted into autocompleter when initialized.
 
-````bash
+````html
 <input type="text" id="company-autocompleter" name="data_array[]" data-selected-items="[{label: 'Item 1', value: 'item_1'}, {label: 'Item 2', value: 'item_2'}]" />
 ````
 
+##### data-sortable (default: false)
+
+Allows drag & drop of chosen items. Requires `$.fn.sortable()` - https://github.com/farhadi/html5sortable
+
+````html
+<input type="text" id="company-autocompleter" name="data_array[]" data-sortable="true" />
+````
 
 ### Events
 
 Each event is triggered on HTML input element, on which autocompleter is initialized.
 
-
-#####json-update.autocompleter (event, json)
+##### json-update.autocompleter (event, json)
 
 Triggered when AJAX request is finished with 200 status. Can be used for response JSON parsing.
 
-````bash
+````js
 function jsonUpdateHandler(event, json) {
     var $autocompleter = $(event.target).next(),
         suggestions = [];
@@ -108,11 +161,11 @@ function jsonUpdateHandler(event, json) {
 $('#company-autocompleter').on('json-update.autocompleter', jsonUpdateHandler);
 ````
 
-#####item-add.autocompleter (event, $item)
+##### item-add.autocompleter (event, $item)
 
 Triggered when item is added to selected items list.
 
-````bash
+````js
 function itemAddHandler(event, $item) {
     console.log('Item was added: ' + $item.data('label'))
 }
@@ -120,11 +173,11 @@ function itemAddHandler(event, $item) {
 $('#company-autocompleter').on('item-add.autocompleter', itemAddHandler);
 ````
 
-#####item-remove.autocompleter (event, $item)
+##### item-remove.autocompleter (event, $item)
 
 Triggered when item is removed from selected items list.
 
-````bash
+````js
 function itemRemoveHandler(event, $item) {
     console.log('Item was removed: ' + $item.data('label'))
 }
@@ -132,11 +185,11 @@ function itemRemoveHandler(event, $item) {
 $('#company-autocompleter').on('item-remove.autocompleter', itemRemoveHandler);
 ````
 
-#####item-focus.autocompleter (event, $item)
+##### item-focus.autocompleter (event, $item)
 
 Triggered when item on selected items list is focused.
 
-````bash
+````js
 function itemFocusHandler(event, $item) {
     console.log('Item was focused: ' + $item.data('label'))
 }
@@ -144,11 +197,11 @@ function itemFocusHandler(event, $item) {
 $('#company-autocompleter').on('item-focus.autocompleter', itemFocusHandler);
 ````
 
-#####input-blur.autocompleter (event)
+##### input-blur.autocompleter (event)
 
 Triggered when autocompleter widget is blurred.
 
-````bash
+````js
 function inputBlurHandler(event, $item) {
     console.log('Autocompleter was blurred')
 }
@@ -156,11 +209,11 @@ function inputBlurHandler(event, $item) {
 $('#company-autocompleter').on('input-blur.autocompleter', inputBlurHandler);
 ````
 
-#####input-clear.autocompleter (event)
+##### input-clear.autocompleter (event)
 
 Triggered when autocompleter input is cleared.
 
-````bash
+````js
 function inputClearHandler(event) {
     console.log('Input was cleared')
 }
@@ -168,87 +221,106 @@ function inputClearHandler(event) {
 $('#company-autocompleter').on('input-clear.autocompleter', inputClearHandler);
 ````
 
+##### item-redundant.autocompleter (event)
+
+Triggered when chosen items max amount is exceeded.
+
+````js
+function itemRedundant() {
+    console.log('You can add maximum 5 items');
+}
+
+$('#company-autocompleter').on('item-redundant.autocompleter', itemRedundantHandler);
+````
+
 ### Methods
 
 Each method should be called on HTML input element, on which autocompleter is initialized.
 
-
-#####build()
+##### build()
 
 Builds particular widget instance
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('build');
 ````
 
-#####refresh()
+##### refresh()
 
 Rebuilds particular widget instance.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('refresh');
 ````
 
-#####destroy()
+##### destroy()
 
 Destroys particular widget instance.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('destroy');
 ````
 
-#####itemAdd(item)
+##### setInputWidth()
+
+Recalculates autocompleter inner input width
+
+````js
+$('#company-autocompleter').autocompleter('setInputWidth');
+````
+
+##### itemAdd(item)
 
 Add specified item to the items list.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('itemAdd', {label: 'Item 1', value: 'item_1'});
 ````
 
-#####itemRemove(item)
+##### itemRemove(item)
 
 Remove specified item from the items list.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('itemRemove', {label: 'Item 1', value: 'item_1'});
 ````
 
-#####getValues()
+##### getValues()
 
 Get values of chosen items.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('getValues');
 ````
 
-#####getTypedText()
+##### getTypedText()
 
 Get text typed into text input field.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('getTypedText');
 ````
 
-#####clear()
+##### clear()
 
 Clear autocompleter widget from chosen items.
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('clear');
 ````
 
-#####disable()
+##### disable()
 
 Disable autocompleter widget
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('disable');
 ````
 
-#####enable()
+##### enable()
 
 Enable autocompleter widget
 
-````bash
+````js
 $('#company-autocompleter').autocompleter('enable');
 ````
