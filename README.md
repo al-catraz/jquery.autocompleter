@@ -324,3 +324,4 @@ Enable autocompleter widget
 ````js
 $('#company-autocompleter').autocompleter('enable');
 ````
+.
